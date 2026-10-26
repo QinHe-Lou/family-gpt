@@ -1,67 +1,54 @@
-# 家庭 GPT 3.0 — iPhone 文件审查、重试与记住登录
+# 家庭 GPT 4.0 — iPhone Safari 美化版
 
-这是对已经上线的 Streamlit 家庭 GPT 网站的**原地升级**。无需重新购买 ChatGPT 订阅或新建 OpenAI API Key。
+这是可直接更新旧版 `family-gpt` Streamlit 网站的项目。继续使用原来的网址和家庭密码，不需要创建新的 Streamlit App。
 
-## 新功能
+## 新增功能
 
-1. **记住这台设备 7 天**：家庭密码登录时勾选即可。Safari Cookie 只保存 HMAC 签名的限时凭证，不写入明文密码；有“退出登录并取消设备记忆”按钮。修改 Streamlit Secrets 中的 `FAMILY_PASSWORD` 或 `OPENAI_API_KEY`，原有 Cookie 会自动失效。此方式是普通家庭网站的轻量登录，不是正式多用户账号系统，也不能防御设备失窃或恶意脚本。Safari 私密浏览 / 禁用 Cookie / 清除网站数据时可能无法记住。
-2. **文件上传前预览和检查**：支持 `pdf/docx/xlsx/txt/md/csv/json/png/jpg/jpeg`，最多 2 个文件，每个最大 8 MB，图片最大 4 MB。检查扩展名、文件签名（适用格式）、解析有效性、ZIP 内部展开上限；展示截取内容或图像、哈希指纹，需再次勾选确认后才把审查内容传给 OpenAI。**不是杀毒软件**；不支持提取扫描版 PDF 里的文字，建议转文字或拍照后上传。
-3. **失败后手动重试**：请求超时、网络/API 故障时保留本次问题和已确认的附件内容，最多尝试 3 次。**不自动重发**，以降低重复提交风险。即使手动重试，服务端已处理但回复丢失的请求仍可能产生重复费用。
-4. 保留 **文字聊天、语音输入、朗读 AI 回复、聊天记录 TXT/JSON 导出与恢复、手机屏幕适配**。
+- **美化界面：** 渐变欢迎区域、卡片聊天、专为 iPhone 优化的控件与触屏尺寸，默认不显示底部的外部推广、部署工具图标（这些 CSS 选择器在 Streamlit 未来更新时可能变化）。
+- **输入栏右侧：** `📎` 选择附件、`🎙️` 录音、`➤` 发送；在文本框内按回车也能发送。
+- **切换模型：** 侧栏可选 GPT-6 Luna、GPT-6.1 Sol、GPT-6 Astra；更高阶模型可能显著增加费用。
+- **管理员 API 设置：** 可临时输入自己的 API Key、完整 HTTPS 接口地址（Base URL），以及选择 Responses API / Chat Completions API 协议或输入自定义模型 ID。
+- **保留 v3 功能：** 文件格式和大小审查、预览后确认发送、人工失败重试、聊天记录导出和恢复、语音朗读，以及「记住登录 7 天」。
 
-## 在 iPhone 上更新你的原网站
+> UI 代码通过静态 Python 语法检查，文件解析、Cookie 签名和 URL 校验通过本地单元测试。由于无法接入你的线上 Streamlit 和 API 凭证，尚未做在线端到端验证。
 
-**先备份原来的 `app.py` 和 `requirements.txt`，不要删除仓库、不要修改 Secrets 的真实密钥。**
+## iPhone 更新步骤（原仓库，无需建新站）
 
-1. 在 iPhone 的“文件”App 中打开提供的 ZIP，找到 `app.py`、`requirements.txt`。
-2. Safari 登录 GitHub，打开你的 `family-gpt` 仓库。
-3. 在 `app.py` 右上角点铅笔 **Edit file**，删除旧代码，替换为新 `app.py` 的全部内容，点 **Commit changes** 保存到 `main`。（若 Safari 页面功能不全，选择“请求桌面网站”。）
-4. 打开仓库根目录的 `requirements.txt`，同样点编辑，将内容完整替换为：
+1. 先去 GitHub 仓库 `family-gpt`，保存/记下目前正常运行的 Commit 号，以便回退。
+2. 将这个压缩包解压，在 iPhone Safari 打开 GitHub 仓库，`Add file` → `Upload files`，将 **新版 `app.py` 与 `requirements.txt` 同时上传到根目录** 覆盖同名旧文件；如果上传界面不支持同名覆盖，可打开每个旧文件编辑/替换内容。
+3. 在 GitHub 提交到 `main`。Streamlit 一般自动重新部署。若没更新，进入 Streamlit `Manage app` → `Reboot`，并看 `Logs`。
+4. **这次新增一步：** 在 Streamlit 应用设置 `Secrets` 增加独立的管理员密码（注意不要把 Secrets 上传 GitHub）：
 
-   ```txt
-   streamlit>=1.54,<2
-   openai>=2.0,<3
-   pypdf>=5,<8
-   python-docx>=1.1,<2
-   openpyxl>=3.1,<4
-   streamlit-cookies-controller>=0.0.3,<1
+   ```toml
+   OPENAI_API_KEY = "你的原有API密钥"
+   FAMILY_PASSWORD = "你的原有家庭登录密码"
+   OPENAI_MODEL = "gpt-6-luna"
+   ADMIN_PASSWORD = "你单独设置的管理员强密码"
+   # 可选：默认接口地址。不写则使用 OpenAI 官方地址
+   # OPENAI_BASE_URL = "https://api.openai.com/v1"
    ```
 
-5. 打开 [Streamlit 部署管理](https://share.streamlit.io/)；应用通常自动拉取 GitHub 的更新并重新安装依赖。若没更新，在 **Manage app → Reboot** 重启，检查 **Logs**。
-6. 打开你原来的网址 `https://family-gpt-01.streamlit.app/` 测试文字问答。**第一次登录先勾选「记住这台设备 7 天」**。关掉 Safari 再打开，检查是否自动登录（需要允许 Cookie）。
-7. 测试文件：上传一个简单 `.txt` 文件，查看内容预览，勾选确认，再点「确认并发送审查」。失败时点击「手动重试」，不需要重新选文件。
+5. 打开旧网址 `https://family-gpt-01.streamlit.app/`，输入家庭密码（已经登录的设备可继续使用此前的 7 天记住登录）。左上角侧边栏选择模型。
+6. 进入侧边栏 **管理员 · 模型与 API**，输入 `ADMIN_PASSWORD` 解锁，才可以修改密钥、Base URL、API 协议和自定义模型 ID。
+7. 测试输入一条文本、点击输入框右侧 `📎` 上传 TXT 后预览确认、点击 `🎙️` 录音、尝试保存和恢复对话。
 
-### Secrets：保持原样
+## 安全和计费说明
 
-```toml
-OPENAI_API_KEY = "你原有的真实 API Key"
-FAMILY_PASSWORD = "你的家庭密码"
-OPENAI_MODEL = "你当前已验证能用的模型名称"
-```
+- **管理员密码不等于家庭密码。** 不填写 `ADMIN_PASSWORD` 时仍可聊天、切换预设模型，但不能在网页里修改连接信息。
+- 网页输入的 API Key 和接口地址只存放在当前浏览器对应的 Streamlit 服务端会话中，不会提交到 GitHub、写入聊天记录、Cookie 或上传文件。若网站重启、登出、会话失效会回退为 Secrets 中的设置。若要永久修改，请在 Streamlit Secrets 中更新。
+- 不能把你的 ChatGPT 订阅当成 API 余额；调用 API 单独计费。模型、文件图片、语音和人工重试都可能产生费用。
+- 自定义 API URL 只能填写 HTTPS 形式的公网地址；请**仅填写你信任的服务商**，因为聊天内容、文件内容及临时输入的 API Key 都会发送给它。应用未保证所有第三方 API 与 OpenAI SDK 兼容；若服务商不支持 Responses API，可在设置中切换 Chat Completions API。
+- 文件解析/审查是格式、大小和可提取内容检查，**不是恶意软件扫描或专业安全审计**。文件内容直到你勾选同意并点击确认后才提交 AI。
+- 失败时不会自动无限重发，最多人工尝试 3 次；即使请求看似失败也可能实际扣费。
+- 7 天记住登录使用签名 Cookie，不含明文家庭密码；应只在私人手机上开启。
+- 不建议上传身份证、财务账号、健康资料或其他不必要的敏感文件。
 
-可以选填：
+## 依赖环境
 
-```toml
-TRANSCRIBE_MODEL = "gpt-4o-mini-transcribe"
-TTS_MODEL = "gpt-4o-mini-tts"
-```
+推荐 Python 3.11/3.12，Streamlit Community Cloud 上可选择对应运行环境。保留仓库根目录内的 `requirements.txt`；这是此前出现 `ModuleNotFoundError: No module named openai` 的关键。
 
-**任何 Secrets 都不要放进 GitHub、聊天截图或聊天消息。**
+## 如果升级失败
 
-## 隐私、安全、费用说明
-
-- 文件在点击「确认并发送」前，只在 Streamlit 应用的会话中解析和预览；点击后，提取文字或图片会送往 OpenAI API。默认没有数据库长期保存上传的文件。不要上传不必要的身份证、合同、财务资料等敏感内容。
-- TXT、Word、PDF、Excel 的提取会有截断上限，只能算内容审查辅助。**不能承诺病毒查杀、法律合规审核或文件绝对安全。**
-- 7 天“记住设备”使用**可由浏览器 JavaScript 读取**的签名 Cookie，不保存明文密码、API Key，也不是 HttpOnly 的专业身份认证。只建议在家庭成员自己的受信任设备上勾选；若担心泄露，修改 `FAMILY_PASSWORD` 或使用侧边栏的“退出登录并取消设备记忆”。
-- 聊天记录仅暂存于当前浏览器会话，不随记住登录而持久保存。要保存聊天，使用导出功能。
-- 每次文字问答、文件审查、语音识别和朗读都可能产生 API 费用。**手动重试也可能重复计费**。会话计数是软限制，不代表整个网站的预算上限。
-- 若 Streamlit 社区云组件加载失败，先检查 Logs，尤其是 `ModuleNotFoundError` 与新增的 Cookies Controller 依赖。
-
-## 开发者自检
-
-```bash
-python -m pip install -r requirements.txt
-python -m streamlit run app.py
-```
-
-修改后的代码通过 Python 语法检查和本地纯函数测试；由于没有用户 API 密钥或在线 Streamlit 浏览器环境，实际云端部署、Cookie 保留与 API 请求仍需要按上文测试。
+- GitHub 确认 `app.py` 和 `requirements.txt` 与本包一致，并且都在根目录。
+- Streamlit `Manage app` → `Logs` 查看最后 20 行错误。
+- 如果新版本影响使用，GitHub 通过旧提交的 `Revert`/恢复旧文件，再提交到 `main` 即可回到上一版。
