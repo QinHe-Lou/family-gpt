@@ -1,4 +1,4 @@
-"""家庭 GPT 4.0 — 为 iPhone Safari 设计的私密家庭 AI 网页。
+"""家庭 GPT 4.1 — 深色高对比 iPhone Safari 私密家庭 AI 网页。
 
 文件会先检查与预览，再由用户明确确认发送；无自动 API 重试。
 """
@@ -32,88 +32,218 @@ from openpyxl import load_workbook
 from pypdf import PdfReader
 from streamlit_cookies_controller import CookieController
 
-st.set_page_config(page_title="家庭 AI · 4.0", page_icon="🏡", layout="centered", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="家庭 AI · 4.1", page_icon="🏡", layout="centered", initial_sidebar_state="collapsed")
+# 尽量收起平台工具菜单；Community Cloud 所属的外层控件可能不受应用 CSS 控制。
+st.set_option("client.toolbarMode", "minimal")
 st.markdown("""
 <style>
-:root { color-scheme: light dark; }
-[data-testid="stAppViewContainer"] {
-  background: radial-gradient(circle at 85% -18%, rgba(107,143,255,.14), transparent 35%),
-              radial-gradient(circle at 2% 30%, rgba(33,173,143,.08), transparent 34%),
-              var(--background-color);
+/* Family GPT 4.1: midnight palette, consistent popup contrast */
+:root {
+  color-scheme: dark;
+  --family-bg: #0B1120;
+  --family-panel: #121E31;
+  --family-panel-2: #1A2940;
+  --family-card: #152238;
+  --family-text: #F1F6FF;
+  --family-muted: #B7C7DB;
+  --family-border: #364963;
+  --family-accent: #6DD9CF;
 }
-.block-container { max-width:900px; padding-top:1.2rem; padding-bottom:7rem; }
-[data-testid="stChatMessage"] {
-  border:1px solid rgba(125,139,171,.13);border-radius:19px;
-  padding:.86rem 1rem; margin:.45rem 0;
-  background:rgba(129,144,177,.045);
-  box-shadow:0 3px 14px rgba(0,0,0,.028);
+html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {
+  background-color: var(--family-bg) !important;
+  color:var(--family-text) !important;
 }
-[data-testid="stChatMessage"] p {overflow-wrap:anywhere;line-height:1.72}
-[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] {max-width:100%}
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-  background:rgba(74,116,215,.08);
+html, body {font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+[data-testid="stAppViewContainer"]{
+  background-image:radial-gradient(ellipse 68% 38% at 50% -12%,rgba(38,95,145,.19),transparent 75%),
+    linear-gradient(180deg,#0B1120 0%,#101A2B 48%,#0B1120 100%)!important;
 }
-.stButton > button, [data-testid="stPopover"] > button {
-  border-radius:13px; min-height:46px;
-  transition:box-shadow .2s, transform .2s;
+[data-testid="stMain"]{background:transparent!important;}
+.block-container{max-width:900px;padding-top:1.1rem;padding-bottom:7.5rem;}
+[data-testid="stMarkdownContainer"], [data-testid="stWidgetLabel"],
+[data-testid="stMarkdownContainer"] p, [data-testid="stCaptionContainer"]{
+  color:var(--family-text);
 }
-.stButton > button:hover, [data-testid="stPopover"] > button:hover {
-  box-shadow:0 5px 15px rgba(64,95,160,.12); transform:translateY(-1px);
-}
-[data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea {
-  font-size:16px!important;border-radius:15px!important;
-}
-[data-testid="stSidebar"] { background:rgba(115,136,164,.045); }
-/* 隐藏 Streamlit 的外部推广/部署图标，但保留侧边栏导航。 */
-#MainMenu, footer, [data-testid="stAppDeployButton"],
-[data-testid="stToolbarActions"], [data-testid="stDecoration"] {display:none!important}
-/* 底部对话输入栏：文件和语音入口排列在输入框右边。 */
-.st-key-family_composer {
- position:sticky;bottom:0;z-index:99;
- padding:.8rem .75rem calc(.75rem + env(safe-area-inset-bottom));
- margin:1rem -.6rem -.6rem;
- border:1px solid rgba(128,151,184,.17);
- border-radius:21px 21px 0 0;
- background:var(--background-color);
- box-shadow:0 -8px 30px rgba(50,69,109,.07);
-}
-.st-key-family_composer [data-testid="stHorizontalBlock"] {align-items:end; gap:.35rem}
-.st-key-family_composer [data-testid="stTextInput"]{margin-bottom:0}
-.st-key-family_composer [data-testid="stElementContainer"]{margin-bottom:0}
-.st-key-family_composer button{min-width:42px;padding-inline:.45rem}
-@media(max-width:640px){
- .block-container{padding:.6rem .65rem 7rem;}
- h1{font-size:1.65rem!important;letter-spacing:-.04em}
- .st-key-family_composer{margin-left:-.5rem;margin-right:-.5rem;
-  padding:.5rem .4rem calc(.55rem + env(safe-area-inset-bottom));}
- .st-key-family_composer [data-testid="stHorizontalBlock"]{gap:.12rem}
- .st-key-family_composer button{min-width:38px;padding-inline:.2rem;font-size:1.05rem}
-}
+[data-testid="stCaptionContainer"],.family-subtitle,.welcome-muted{color:var(--family-muted)!important;opacity:1!important;}
 
-/* 4.0 主页视觉风格 */
-.family-hero {margin:0 0 .8rem;padding:.45rem .25rem .8rem;}
-.family-pill {display:inline-block;color:#4b76b0;font-size:.72rem;letter-spacing:.07em;
- border:1px solid rgba(84,137,213,.20);border-radius:100px;padding:.24rem .75rem;
- background:rgba(79,137,225,.08);font-weight:700;}
-.family-name {font-size:2.06rem;font-weight:820;letter-spacing:-.055em;margin:.54rem 0 .18rem;line-height:1.2;}
-.family-name span {background:linear-gradient(110deg,#467ce9,#39a7a2);color:transparent;background-clip:text;}
-.family-subtitle,.welcome-muted {opacity:.69;line-height:1.6;font-size:.91rem;}
-.welcome-card {border:1px solid rgba(133,153,183,.17);border-radius:22px;
- background:linear-gradient(130deg,rgba(91,145,237,.10),rgba(87,193,167,.07));
- padding:1.5rem;margin:1.5rem 0 1.2rem;min-height:145px;}
-.idea-row {display:flex;gap:.45rem;flex-wrap:wrap;margin-top:1rem;}
-.idea-row span {border-radius:100px;padding:.35rem .65rem;
- font-size:.78rem;border:1px solid rgba(117,142,178,.20);background:rgba(146,169,201,.07);}
-/* 确保输入框右侧是按钮，而不是上下两排 */
-.st-key-family_composer [data-testid="stHorizontalBlock"] {flex-wrap:nowrap!important;}
-.st-key-family_composer [data-testid="column"] {min-width:0!important;}
-.st-key-family_composer [data-testid="stTextInput"] input {height:46px!important;
- border-radius:14px!important;background:rgba(125,145,174,.07);}
-.st-key-family_composer button {border-radius:12px!important;}
+/* Sidebar plus ALL collapsible panels */
+[data-testid="stSidebar"], [data-testid="stSidebarContent"] {
+  background:#101B2E!important; color:var(--family-text)!important;
+}
+[data-testid="stSidebar"]{border-right:1px solid var(--family-border);}
+[data-testid="stSidebar"] * { scrollbar-color:#455B76 #101B2E; }
+[data-testid="stExpander"], details[data-testid="stExpander"],
+[data-testid="stPopoverBody"], [data-testid="stDialog"] {
+  background:var(--family-panel)!important;
+  color:var(--family-text)!important;
+  border:1px solid var(--family-border)!important;
+  border-radius:16px!important;
+}
+[data-testid="stExpander"] summary,
+[data-testid="stExpander"] summary:hover,
+[data-testid="stExpander"] [data-testid="stExpanderToggleIcon"],
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"],
+[data-testid="stPopoverBody"] label,
+[data-testid="stPopoverBody"] [data-testid="stMarkdownContainer"] {
+  color:var(--family-text)!important;
+  background-color:transparent!important;
+}
+[data-testid="stExpander"] summary:hover{background:var(--family-panel-2)!important;}
+[data-testid="stPopoverBody"]{box-shadow:0 18px 40px #0207149c!important;}
+
+/* Dropdown menus render in a portal OUTSIDE the sidebar; explicitly theme them.
+   New Streamlit uses stSelectboxVirtualDropdown; older versions use BaseWeb. */
+[data-testid="stSelectboxVirtualDropdown"],
+[data-testid="stSelectboxVirtualDropdown"] > div,
+[data-baseweb="popover"], [data-baseweb="popover"] > div,
+[data-baseweb="menu"], [data-baseweb="select"] [role="listbox"],
+[role="listbox"], [role="menu"], [data-testid="stSelectbox"] [role="listbox"]{
+  background:var(--family-panel)!important;
+  color:var(--family-text)!important;
+  border-color:var(--family-border)!important;
+}
+[data-testid="stSelectboxVirtualDropdown"] *,
+[data-baseweb="popover"] *,
+[role="listbox"] *, [role="menu"] * {
+  color:var(--family-text)!important;
+}
+[data-testid="stSelectboxVirtualDropdown"] [role="option"],
+[data-baseweb="menu"] li,
+[role="option"], [role="menuitem"] {
+  background:var(--family-panel)!important;
+  color:var(--family-text)!important;
+}
+[data-testid="stSelectboxVirtualDropdown"] [role="option"]:hover,
+[data-testid="stSelectboxVirtualDropdown"] [role="option"][aria-selected="true"],
+[data-baseweb="menu"] li:hover,
+[role="option"]:hover, [role="option"][aria-selected="true"],
+[role="menuitem"]:hover {
+  background:#263B56!important;color:#FFFFFF!important;
+}
+/* Explicit select trigger backgrounds, including when the menu is closed. */
+[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+[data-testid="stSelectbox"] [data-baseweb="select"] input,
+[data-testid="stSelectbox"] [data-testid="stSelectboxVirtualDropdown"],
+[data-baseweb="select"] > div:first-child {
+  background:var(--family-panel-2)!important;color:var(--family-text)!important;
+  border-color:var(--family-border)!important;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"] *,
+[data-testid="stSelectbox"] [data-testid="stMarkdownContainer"],
+[data-testid="stSelectbox"] svg {color:var(--family-text)!important;fill:currentColor!important;}
+
+/* Consistent legible inputs, controls, radios, popovers. */
+[data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea,
+[data-testid="stNumberInput"] input, [data-testid="stFileUploader"] section,
+[data-testid="stAudioInput"],
+textarea, input:not([type="checkbox"]):not([type="radio"]){
+  background:var(--family-panel-2)!important;
+  color:var(--family-text)!important;
+  border-color:var(--family-border)!important;
+  border-radius:13px!important;
+  font-size:16px!important;
+}
+input::placeholder,textarea::placeholder{color:#A9BAD2!important;opacity:1!important;}
+input:focus,textarea:focus{outline-color:var(--family-accent)!important;}
+[data-testid="stCheckbox"] label, [data-testid="stToggle"] label,
+[data-testid="stFileUploader"] label, [data-testid="stRadio"] label{
+  color:var(--family-text)!important;
+}
+.stButton>button, [data-testid="stPopover"]>button,
+.stDownloadButton>button,[data-testid="stFormSubmitButton"]>button{
+  background:#1C2D46!important;color:#F1F6FF!important;
+  border:1px solid #38516E!important;border-radius:13px!important;
+  min-height:44px;transition:background .2s,box-shadow .2s;
+}
+.stButton>button:hover,[data-testid="stPopover"]>button:hover,
+.stDownloadButton>button:hover,[data-testid="stFormSubmitButton"]>button:hover{
+  background:#284562!important;color:#FFF!important;
+  border-color:#6DD9CF!important;box-shadow:0 0 0 1px #6DD9CF33!important;
+}
+.stButton>button[kind="primary"],button[data-testid="stBaseButton-primary"],
+[data-testid="stFormSubmitButton"] button[kind="primary"]{
+  background:#2D847F!important;color:#FFFFFF!important;border-color:#49BFB5!important;
+}
+[data-testid="stAlert"], [data-testid="stNotification"],
+[data-testid="stToast"]{color:var(--family-text)!important;border-color:var(--family-border)!important;}
+
+/* Chat bubbles with readable hierarchy */
+[data-testid="stChatMessage"]{
+  background:#121E32!important;border:1px solid #30425C!important;
+  border-radius:20px!important;padding:.85rem 1rem;margin:.52rem 0;
+  box-shadow:0 5px 18px rgba(0,0,0,.10);
+}
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]){
+  background:#1B3047!important;border-color:#3B5871!important;
+}
+[data-testid="stChatMessage"] p{color:var(--family-text)!important;overflow-wrap:anywhere;line-height:1.73;}
+[data-testid="stChatMessage"] code{overflow-wrap:anywhere;}
+
+/* Keep settings hamburger visible; hide only optional platform/cloud chrome. */
+#MainMenu,footer, #GithubIcon,
+[data-testid="stAppDeployButton"],
+[data-testid="stToolbarActions"],
+[data-testid="stDecoration"],
+[data-testid="stViewerBadge"],
+[data-testid="stStatusWidget"],
+[data-testid="stManageAppButton"],
+.viewerBadge_container__1QSob,
+.styles_viewerBadge__1yB5_,
+.viewerBadge_link__1S137,
+.viewerBadge_text__1JaDK,
+[class*="viewerBadge"],
+[id*="viewerBadge"],
+[data-testid="stToolbar"] a[href*="github.com"] {
+  display:none!important; visibility:hidden!important;
+}
+/* Keep sidebar open/close control usable on iPhone. */
+[data-testid="stSidebarCollapsedControl"], [data-testid="stSidebarCollapseButton"],
+[data-testid="stExpandSidebarButton"] {display:flex!important;visibility:visible!important;}
+
+/* Composer dock: on the right, attachment then mic, finally send. */
+.st-key-family_composer{
+  position:sticky;bottom:0;z-index:50;
+  padding:.7rem .65rem calc(.75rem + env(safe-area-inset-bottom));
+  margin:1rem -.5rem -.5rem;
+  background:#111D30!important;
+  border:1px solid #304761;border-radius:21px 21px 0 0;
+  box-shadow:0 -8px 35px #040A18A6;
+}
+.st-key-family_composer [data-testid="stHorizontalBlock"]{align-items:end;gap:.35rem;flex-wrap:nowrap!important;}
+.st-key-family_composer [data-testid="column"]{min-width:0!important;}
+.st-key-family_composer button{min-width:40px;padding-inline:.40rem;}
+.st-key-family_composer [data-testid="stTextInput"]{margin-bottom:0;}
+.st-key-family_composer [data-testid="stTextInput"] input{
+  height:48px!important;border-radius:14px!important;
+  background:#1B2A43!important;color:#F5F9FF!important;
+}
+.st-key-family_composer [data-testid="stElementContainer"]{margin-bottom:0;}
+
+/* High-contrast hero, no hard-coded light-only text */
+.family-hero{margin:0 0 .8rem;padding:.65rem .2rem .7rem;}
+.family-pill{display:inline-block;color:#9FF1E8!important;font-size:.72rem;
+  font-weight:750;letter-spacing:.05em;border:1px solid #376B78;
+  border-radius:99px;padding:.29rem .77rem;background:#153143;}
+.family-name{color:#F4F8FF!important;font-size:2.12rem;font-weight:810;
+  letter-spacing:-.045em;margin:.56rem 0 .18rem;line-height:1.2;}
+.family-name span{color:#83E7DC!important;background:none!important;}
+.family-subtitle,.welcome-muted{color:#BDCCE0!important;line-height:1.65;font-size:.91rem;}
+.welcome-card{border:1px solid #324B66;border-radius:22px;
+ background:linear-gradient(130deg,#172840 0%,#13293A 100%);
+ padding:1.55rem;margin:1.35rem 0 1.1rem;min-height:135px;}
+.welcome-card>div:first-child{color:#F4F8FF!important;}
+.idea-row{display:flex;gap:.42rem;flex-wrap:wrap;margin-top:1.05rem;}
+.idea-row span{border:1px solid #39536D;background:#213650;border-radius:99px;
+ padding:.36rem .68rem;font-size:.79rem;color:#DCE9F7!important;}
 @media(max-width:640px){
- .family-name{font-size:1.75rem;}
- .welcome-card{padding:1.15rem;min-height:125px;}
- .st-key-family_composer [data-testid="stTextInput"] input {font-size:16px!important;}
+  .block-container{padding:.66rem .67rem 7.75rem;}
+  h1{font-size:1.6rem!important;}
+  .family-name{font-size:1.78rem;}
+  .welcome-card{padding:1.12rem;min-height:118px;}
+  .st-key-family_composer{margin-left:-.55rem;margin-right:-.55rem;
+    padding:.52rem .35rem calc(.65rem + env(safe-area-inset-bottom));}
+  .st-key-family_composer [data-testid="stHorizontalBlock"]{gap:.12rem;}
+  .st-key-family_composer button{min-width:36px;padding-inline:.14rem;font-size:1.02rem;}
 }
 </style>
 """, unsafe_allow_html=True)
@@ -561,13 +691,13 @@ with st.sidebar:
     st.caption("当前会话请求数：%d / %d" % (st.session_state.request_count, MAX_TURNS))
 
 # 主界面：去掉外部推广图标，保留侧栏设置入口。
-st.markdown('''<div class="family-hero"><span class="family-pill">● 家庭共享 · 在线</span>
+st.markdown('''<div class="family-hero"><span class="family-pill">● 私人家庭空间</span>
 <div class="family-name">🏡 家庭 AI <span>助手</span></div>
-<div class="family-subtitle">安心聊天、看文件、语音提问，所有常用功能都在这里。</div></div>''', unsafe_allow_html=True)
+<div class="family-subtitle">清晰、简单、私密。聊天、文件和语音功能触手可及。</div></div>''', unsafe_allow_html=True)
 st.caption("当前模型：" + st.session_state.selected_model + "　·　聊天及语音 API 按实际使用量计费")
 if not st.session_state.messages and st.session_state.pending is None:
-    st.markdown('''<div class="welcome-card"><div style="font-size:1.25rem;font-weight:700">今天想聊些什么？ ✨</div>
-<div class="welcome-muted">输入问题即可开始；右侧的 📎 能上传文件，🎙️ 可以录音。</div>
+    st.markdown('''<div class="welcome-card"><div style="font-size:1.25rem;font-weight:700">今天有什么新想法？</div>
+<div class="welcome-muted">直接输入你的问题，也可以使用输入框右边的附件或语音按钮。</div>
 <div class="idea-row"><span>✦ 学习答疑</span><span>✦ 生活建议</span><span>✦ 文件审查</span></div></div>''', unsafe_allow_html=True)
 
 for msg in st.session_state.messages:
